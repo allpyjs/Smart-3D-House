@@ -1,6 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import DownloadModal from "./components/DownloadModal";
+import Header from "./components/Header";
+import TabGroup from "./components/TabGroup";
 
 function App() {
+  const [showOutputModal, setShowOutputModal] = useState(false);
+  const [selectedTab, setSelectedTab] = useState('3d')
+
   useEffect(() => {
     // Load external JS files after component mounts
     const scripts = [
@@ -19,6 +25,14 @@ function App() {
       document.body.appendChild(script);
     });
   }, []);
+
+  return (
+    <div>
+      <Header setShowOutputModal={setShowOutputModal} />
+      <TabGroup selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
+      <DownloadModal showModal={showOutputModal} setShowModal={setShowOutputModal} />
+    </div>
+  );
 
   return (
     <div className="container-fluid">
@@ -48,7 +62,7 @@ function App() {
             <hr />
 
             <div id="context-menu">
-              <div style={{margin: '0 20px' }}>
+              <div style={{ margin: "0 20px" }}>
                 <span id="context-menu-name" className="lead"></span>
                 <br />
                 <br />
@@ -62,7 +76,7 @@ function App() {
                 <br />
                 <div className="panel panel-default">
                   <div className="panel-heading">Adjust Size</div>
-                  <div className="panel-body" style={{ color: '#333333' }}>
+                  <div className="panel-body" style={{ color: "#333333" }}>
                     <div className="form form-horizontal">
                       <div className="form-group">
                         <label className="col-sm-5 control-label">Width</label>
@@ -111,11 +125,14 @@ function App() {
               </div>
             </div>
 
-            <div id="floorTexturesDiv" style={{display: 'none', padding: '0 20px' }}>
+            <div
+              id="floorTexturesDiv"
+              style={{ display: "none", padding: "0 20px" }}
+            >
               <div className="panel panel-default">
                 <div className="panel-heading">Adjust Floor</div>
-                <div className="panel-body" style={{ color: '#333333' }}>
-                  <div className="col-sm-6" style={{ padding: '3px' }}>
+                <div className="panel-body" style={{ color: "#333333" }}>
+                  <div className="col-sm-6" style={{ padding: "3px" }}>
                     <a
                       href="#"
                       className="thumbnail texture-select-thumbnail"
@@ -133,11 +150,14 @@ function App() {
               </div>
             </div>
 
-            <div id="wallTextures" style={{ display: 'none', padding: '0 20px' }}>
+            <div
+              id="wallTextures"
+              style={{ display: "none", padding: "0 20px" }}
+            >
               <div className="panel panel-default">
                 <div className="panel-heading">Adjust Wall</div>
-                <div className="panel-body" style={{ color: '#333333' }}>
-                  <div className="col-sm-6" style={{ padding: '3px' }}>
+                <div className="panel-body" style={{ color: "#333333" }}>
+                  <div className="col-sm-6" style={{ padding: "3px" }}>
                     <a
                       href="#"
                       className="thumbnail texture-select-thumbnail"
@@ -151,7 +171,7 @@ function App() {
                       />
                     </a>
                   </div>
-                  <div className="col-sm-6" style={{ padding: '3px' }}>
+                  <div className="col-sm-6" style={{ padding: "3px" }}>
                     <a
                       href="#"
                       className="thumbnail texture-select-thumbnail"
@@ -165,7 +185,7 @@ function App() {
                       />
                     </a>
                   </div>
-                  <div className="col-sm-6" style={{ padding: '3px' }}>
+                  <div className="col-sm-6" style={{ padding: "3px" }}>
                     <a
                       href="#"
                       className="thumbnail texture-select-thumbnail"
