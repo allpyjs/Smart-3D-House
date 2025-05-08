@@ -136,7 +136,10 @@ const DownloadModal = ({ showModal, setShowModal }) => {
           <button className="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white cursor-pointer transition-all duration-300 rounded min-w-16">
             Download
           </button>
-          <button className="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white cursor-pointer transition-all duration-300 rounded min-w-16">
+          <button
+            className="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white cursor-pointer transition-all duration-300 rounded min-w-16"
+            onClick={() => setShowModal(false)}
+          >
             Cancel
           </button>
         </div>
