@@ -13,6 +13,9 @@ const Header = ({ setShowOutputModal }) => {
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <button className="rounded cursor-pointer px-2 py-1 text-sm font-semibold uppercase hover:border bg-white hover:border-sky-300 transition-all duration-300">
+          TestCAD
+        </button>
         <button
           className="rounded cursor-pointer px-2 py-1 text-sm font-semibold uppercase hover:border bg-white hover:border-sky-300 transition-all duration-300"
           onClick={() => setShowOutputModal(true)}
