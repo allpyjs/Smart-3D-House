@@ -1,14 +1,9 @@
-import clsx from "clsx";
-import React, { useEffect, useRef, useState } from "react";
-import { FaChevronDown, FaChevronRight, FaChevronUp } from "react-icons/fa";
-import ModalEffects from "../ModalEffects";
+import React, { useState } from "react";
 
 const postFrameActions = [
-  { label: "Main Building", value: "main" },
+  { label: "Main", value: "main" },
   { label: "Details", value: "details" },
   { label: "Door and Window", value: "door" },
-  { label: "Packages", value: "package" },
-  { label: "Job", value: "job" },
 ];
 
 const PostFrame = () => {
@@ -54,36 +49,7 @@ const PostFrame = () => {
   );
 };
 
-const ThreeDim = () => {
-  const isLoadingRef = useRef(false)
-  const blueprint3d = useRef(null)
-
-  useEffect(() => {
-    if (isLoadingRef.current) return
-    isLoadingRef.current = true
-    const opts = {
-      floorplannerElement: 'floorplanner-canvas',
-      threeElement: '#viewer',
-      threeCanvasElement: 'three-canvas',
-      textureDir: "models/textures/",
-      widget: false
-    }
-    blueprint3d.current = new Blueprint3d(opts);
-  
-    // var modalEffects = new ModalEffects(blueprint3d);
-    // var viewerFloorplanner = new ViewerFloorplanner(blueprint3d);
-    // var contextMenu = new ContextMenu(blueprint3d);
-    // var sideMenu = new SideMenu(blueprint3d, viewerFloorplanner, modalEffects);
-    // var textureSelector = new TextureSelector(blueprint3d, sideMenu);        
-    // var cameraButtons = new CameraButtons(blueprint3d);
-    // mainControls(blueprint3d);
-  
-    // This serialization format needs work
-    // Load a simple rectangle room
-     const data = '{"floorplan":{"corners":{"f90da5e3-9e0e-eba7-173d-eb0b071e838e":{"x":204.85099999999989,"y":289.052},"da026c08-d76a-a944-8e7b-096b752da9ed":{"x":672.2109999999999,"y":289.052},"4e3d65cb-54c0-0681-28bf-bddcc7bdb571":{"x":672.2109999999999,"y":-178.308},"71d4f128-ae80-3d58-9bd2-711c6ce6cdf2":{"x":204.85099999999989,"y":-178.308}},"walls":[{"corner1":"71d4f128-ae80-3d58-9bd2-711c6ce6cdf2","corner2":"f90da5e3-9e0e-eba7-173d-eb0b071e838e","frontTexture":{"url":"rooms/textures/wallmap.png","stretch":true,"scale":0},"backTexture":{"url":"rooms/textures/wallmap.png","stretch":true,"scale":0}},{"corner1":"f90da5e3-9e0e-eba7-173d-eb0b071e838e","corner2":"da026c08-d76a-a944-8e7b-096b752da9ed","frontTexture":{"url":"rooms/textures/wallmap.png","stretch":true,"scale":0},"backTexture":{"url":"rooms/textures/wallmap.png","stretch":true,"scale":0}},{"corner1":"da026c08-d76a-a944-8e7b-096b752da9ed","corner2":"4e3d65cb-54c0-0681-28bf-bddcc7bdb571","frontTexture":{"url":"rooms/textures/wallmap.png","stretch":true,"scale":0},"backTexture":{"url":"rooms/textures/wallmap.png","stretch":true,"scale":0}},{"corner1":"4e3d65cb-54c0-0681-28bf-bddcc7bdb571","corner2":"71d4f128-ae80-3d58-9bd2-711c6ce6cdf2","frontTexture":{"url":"rooms/textures/wallmap.png","stretch":true,"scale":0},"backTexture":{"url":"rooms/textures/wallmap.png","stretch":true,"scale":0}}],"wallTextures":[],"floorTextures":{},"newFloorTextures":{}},"items":[{"item_name":"Window","item_type":3,"model_url":"models/js/whitewindow.js","xpos":205.3509979248047,"ypos":127.03031163942109,"zpos":160.47680403593296,"rotation":1.5707963267948966,"scale_x":1,"scale_y":1,"scale_z":1,"fixed":false},{"item_name":"Window","item_type":3,"model_url":"models/js/whitewindow.js","xpos":443.7116817853549,"ypos":132.7544164296371,"zpos":-177.80799865722656,"rotation":0,"scale_x":1,"scale_y":1,"scale_z":1,"fixed":false},{"item_name":"Closed Door","item_type":7,"model_url":"models/js/closed-door28x80_baked.js","xpos":511.23832023937194,"ypos":110.80000022010701,"zpos":288.552001953125,"rotation":3.141592653589793,"scale_x":1,"scale_y":1,"scale_z":1,"fixed":false}]}'
-     blueprint3d.current.model.loadSerialized(data);
-  }, [])
-
+const AdvancedEdit = () => {
   return (
     <div className="flex items-center flex-wrap justify-between h-full">
       <div className="flex flex-col shrink-0 grow basis-0 h-full">
@@ -121,13 +87,7 @@ const ThreeDim = () => {
         </div>
         <div className="h-2 bg-gray-400"></div>
         <div className="flex justify-between flex-col grow shrink-0 basis-0">
-          <div className="grow shrink-0 basis-0 bg-sky-100">
-            <div id="viewer">
-            </div>
-            <div id="floorplanner" hidden>
-              <canvas id="floorplanner-canvas"></canvas>
-            </div>
-          </div>
+          <div className="grow shrink-0 basis-0 bg-sky-100">Stage</div>
           <div className="py-1 px-5 bg-sky-600 flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
               <div className="font-semibold capitalize px-3 text-white">
@@ -188,9 +148,8 @@ const ThreeDim = () => {
           </div>
         </div>
       </div>
-      <ModalEffects blueprint3d={blueprint3d.current} />
     </div>
   );
 };
 
-export default ThreeDim;
+export default AdvancedEdit;
