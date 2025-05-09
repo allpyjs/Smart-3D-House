@@ -1,12 +1,30 @@
-import React, { useState } from "react";
+import clsx from "clsx";
+import React, { useEffect, useRef, useState } from "react";
+import { FaChevronDown, FaChevronRight, FaChevronUp } from "react-icons/fa";
+
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 const postFrameActions = [
-  { label: "Main", value: "main" },
+  { label: "Main Building", value: "main" },
   { label: "Details", value: "details" },
   { label: "Door and Window", value: "door" },
+  { label: "Packages", value: "package" },
+  { label: "Job", value: "job" },
+];
+const houseItems = [
+  { label: "Roof", value: "roof" },
+  { label: "Wall", value: "walls" },
+  { label: "Floor", value: "floor" },
+  { label: "Roof-1", value: "roofLeft" },
+  { label: "Roof-2", value: "roofRight" },
+  { label: "EXT-1", value: "wall1" },
+  { label: "EXT-2", value: "wall2" },
+  { label: "EXT-3", value: "wall3" },
+  { label: "EXT-4", value: "wall4" },
 ];
 
-const PostFrame = () => {
+const PostFrame = ({ params, setParams }) => {
   const [activeTab, setActiveTab] = useState("main");
 
   return (
@@ -26,30 +44,443 @@ const PostFrame = () => {
         ))}
       </div>
       <div className="p-2">
-        <div className="flex flex-col gap-1">
-          <div className="table-row">
-            <div className="table-cell w-full bg-gray-200 font-semibold align-middle px-3">
-              Building Size
-            </div>
-            <div className="table-cell p-3 bg-sky-600 text-white">
-              <FaChevronRight />
-            </div>
+        <div className="flex flex-col gap-1 px-3">
+          <div className="flex items-center gap-2">
+            <div className="text-sm">Ceiling Angle</div>
+            <input
+              type="number"
+              className="outline-0 px-4 py-2 max-w-40 rounded border border-gray-400 focus:border-sky-600 transition-all duration-300"
+              value={params.ceilingAngle}
+              onChange={(e) =>
+                setParams({
+                  ...params,
+                  ceilingAngle: Number(e.target.value),
+                })
+              }
+              step={0.1}
+              min={80}
+              max={90}
+            />
           </div>
-          <div className="table-row">
-            <div className="table-cell w-full bg-gray-200 font-semibold align-middle px-3">
-              Building Size
-            </div>
-            <div className="table-cell p-3 bg-sky-600 text-white">
-              <FaChevronRight />
-            </div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm">Wall Height</div>
+            <input
+              type="number"
+              className="outline-0 px-4 py-2 max-w-40 rounded border border-gray-400 focus:border-sky-600 transition-all duration-300"
+              value={params.height}
+              onChange={(e) =>
+                setParams({
+                  ...params,
+                  height: Number(e.target.value),
+                })
+              }
+              min={1}
+              max={6}
+              step={0.1}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm">Floor Width</div>
+            <input
+              type="number"
+              className="outline-0 px-4 py-2 max-w-40 rounded border border-gray-400 focus:border-sky-600 transition-all duration-300"
+              value={params.floorWidth}
+              onChange={(e) =>
+                setParams({
+                  ...params,
+                  floorWidth: Number(e.target.value),
+                })
+              }
+              min={2}
+              max={10}
+              step={0.1}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm">Floor Depth</div>
+            <input
+              type="number"
+              className="outline-0 px-4 py-2 max-w-40 rounded border border-gray-400 focus:border-sky-600 transition-all duration-300"
+              value={params.floorDepth}
+              onChange={(e) =>
+                setParams({
+                  ...params,
+                  floorDepth: Number(e.target.value),
+                })
+              }
+              min={2}
+              max={10}
+              step={0.1}
+            />
           </div>
         </div>
+        {/* <div className="flex flex-col gap-1">
+          <div className="table-row">
+            <div className="table-cell w-full bg-gray-200 font-semibold align-middle px-3">
+              Building Size
+            </div>
+            <div className="table-cell p-3 bg-sky-600 text-white">
+              <FaChevronRight />
+            </div>
+          </div>
+          <div className="table-row">
+            <div className="table-cell w-full bg-gray-200 font-semibold align-middle px-3">
+              Building Size
+            </div>
+            <div className="table-cell p-3 bg-sky-600 text-white">
+              <FaChevronRight />
+            </div>
+          </div>
+        </div> */}
       </div>
     </div>
   );
 };
 
-const AdvancedEdit = () => {
+const SELECT_COLOR = 0xff4444;
+const SELECT_OPACITY = 0.5;
+
+const AdvancedEdit = ({ params, setParams }) => {
+  const [selectedObjects, setSelectedObjects] = useState([]);
+  const canvasRef = useRef();
+  const houseRef = useRef();
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const materials = {
+      wall: new THREE.MeshStandardMaterial({
+        color: 0x9999aa,
+        roughness: 0.6,
+        metalness: 0,
+      }),
+      floor: new THREE.MeshStandardMaterial({
+        color: 0xffffab,
+        roughness: 0.7,
+        metalness: 0,
+      }),
+      roof: new THREE.MeshStandardMaterial({
+        color: 0x774422,
+        roughness: 0.5,
+        metalness: 0,
+      }),
+    };
+
+    function createHouseObjects(scene, materials, params) {
+      const clipPlanes = {
+        left: new THREE.Plane(new THREE.Vector3(0, -1, -1).normalize(), 0),
+        right: new THREE.Plane(new THREE.Vector3(0, -1, 1).normalize(), 0),
+      };
+      materials.wall.clippingPlanes = [clipPlanes.left, clipPlanes.right];
+      materials.wall.clipShadows = true;
+      materials.wall.stencilFail = THREE.DecrementWrapStencilOp;
+      materials.wall.stencilZFail = THREE.DecrementWrapStencilOp;
+      materials.wall.stencilZPass = THREE.DecrementWrapStencilOp;
+
+      const floor = new THREE.Mesh(
+        new THREE.BoxGeometry(params.floorWidth, 0.2, params.floorDepth),
+        materials.floor
+      );
+      floor.position.y = 0;
+      floor.name = "floor";
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      const wall1 = new THREE.Mesh(
+        new THREE.BoxGeometry(params.floorWidth, params.height * 2, 0.1),
+        materials.wall
+      );
+      wall1.position.set(0, params.height, -params.floorWidth / 2);
+      wall1.name = "wall1";
+      wall1.castShadow = true;
+      wall1.receiveShadow = true;
+      scene.add(wall1);
+
+      const wall2 = wall1.clone();
+      wall2.position.set(0, params.height, params.floorWidth / 2);
+      wall2.name = "wall2";
+      wall2.castShadow = true;
+      wall2.receiveShadow = true;
+      scene.add(wall2);
+
+      const wall3 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, params.height * 2 + 20, params.floorWidth),
+        materials.wall
+      );
+      wall3.position.set(-params.floorWidth / 2, params.height + 10, 0);
+      wall3.name = "wall3";
+      wall3.castShadow = true;
+      wall3.receiveShadow = true;
+      scene.add(wall3);
+
+      const wall4 = wall3.clone();
+      wall4.position.set(params.floorWidth / 2, params.height + 10, 0);
+      wall4.name = "wall4";
+      wall4.castShadow = true;
+      wall4.receiveShadow = true;
+      scene.add(wall4);
+
+      const roofLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          params.floorWidth,
+          0.1,
+          (params.floorDepth / 2) * Math.sqrt(2)
+        ),
+        materials.roof
+      );
+      roofLeft.name = "roofLeft";
+      roofLeft.castShadow = true;
+      roofLeft.receiveShadow = true;
+      const roofRight = roofLeft.clone();
+      roofRight.name = "roofRight";
+      roofRight.castShadow = true;
+      roofRight.receiveShadow = true;
+      scene.add(roofLeft);
+      scene.add(roofRight);
+
+      const groundGeo = new THREE.PlaneGeometry(50, 50);
+      const groundMat = new THREE.ShadowMaterial({ opacity: 0.3 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = 0.01;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      function updateRoof(angle, h, w, d) {
+        const angleRad = THREE.MathUtils.degToRad(angle / 2);
+        const y = d / 2 / Math.tan(angleRad);
+        const offsetZ = d / 4;
+
+        const slopeVectorLeft = new THREE.Vector3(
+          0,
+          -1,
+          -Math.tan(angleRad)
+        ).normalize();
+        const slopeVectorRight = new THREE.Vector3(
+          0,
+          -1,
+          Math.tan(angleRad)
+        ).normalize();
+
+        clipPlanes.left.set(
+          slopeVectorLeft,
+          -slopeVectorLeft.dot(new THREE.Vector3(0, h + y / 2, offsetZ))
+        );
+        clipPlanes.right.set(
+          slopeVectorRight,
+          -slopeVectorRight.dot(new THREE.Vector3(0, h + y / 2, -offsetZ))
+        );
+
+        roofLeft.rotation.x = -angleRad;
+        roofLeft.position.set(0, h + y / 2, -offsetZ);
+        roofLeft.scale.set(w / 4, 1, d / 4);
+
+        roofRight.rotation.x = angleRad;
+        roofRight.position.set(0, h + y / 2, offsetZ);
+        roofRight.scale.set(w / 4, 1, d / 4);
+      }
+
+      updateRoof(
+        params.ceilingAngle,
+        params.height,
+        params.floorWidth,
+        params.floorDepth
+      );
+
+      return {
+        floor,
+        wall1,
+        wall2,
+        wall3,
+        wall4,
+        roofLeft,
+        roofRight,
+        updateRoof,
+      };
+    }
+
+    function createRendererAndScene(canvas) {
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xe0e0e0);
+
+      const camera = new THREE.PerspectiveCamera(
+        60,
+        canvas.clientWidth / canvas.clientHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(6, 6, 10);
+      camera.lookAt(0, params.height, 0);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.localClippingEnabled = true;
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.target.set(0, params.height, 0);
+      controls.update();
+
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+      hemiLight.position.set(0, 20, 0);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      dirLight.position.set(5, 10, 7);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      dirLight.shadow.camera.near = 1;
+      dirLight.shadow.camera.far = 30;
+      dirLight.shadow.camera.left = -10;
+      dirLight.shadow.camera.right = 10;
+      dirLight.shadow.camera.top = 10;
+      dirLight.shadow.camera.bottom = -10;
+      dirLight.shadow.bias = -0.0015;
+      scene.add(dirLight);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+      scene.add(ambientLight);
+
+      return { scene, camera, renderer, controls };
+    }
+
+    const { scene, camera, renderer, controls } =
+      createRendererAndScene(canvas);
+    const house = createHouseObjects(scene, materials, params);
+
+    houseRef.current = house;
+
+    const raycaster3d = new THREE.Raycaster();
+    raycaster3d.params.Mesh.threshold = 0.1;
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Resize handling
+    const handleResize = () => {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      renderer.dispose();
+    };
+  }, [params]);
+  useEffect(() => {
+    if (!houseRef.current) return;
+    function storeOriginals(object, colorsMap, opacitiesMap) {
+      if (!colorsMap.has(object))
+        colorsMap.set(object, object.material.color.getHex());
+      if (!opacitiesMap.has(object))
+        opacitiesMap.set(
+          object,
+          object.material.opacity !== undefined ? object.material.opacity : 1
+        );
+    }
+    function setObjectColor(object, colorHex) {
+      object.material.color.setHex(colorHex);
+    }
+    function setObjectOpacity(object, opacity) {
+      object.material.transparent = opacity < 1;
+      object.material.opacity = opacity;
+    }
+    function restoreObject(object, colorsMap, opacitiesMap) {
+      if (!object) return;
+      if (colorsMap.has(object)) setObjectColor(object, colorsMap.get(object));
+      if (opacitiesMap.has(object))
+        setObjectOpacity(object, opacitiesMap.get(object));
+      else setObjectOpacity(object, 1);
+    }
+    function updateVisualStates(selectedObjects, colorsMap, opacitiesMap) {
+      [...colorsMap.keys()].forEach((obj) => {
+        if (!selectedObjects.includes(obj) && obj !== hoveredObject)
+          restoreObject(obj, colorsMap, opacitiesMap);
+      });
+      selectedObjects.forEach((obj) => {
+        setObjectColor(obj, SELECT_COLOR);
+        setObjectOpacity(obj, SELECT_OPACITY);
+      });
+    }
+    const originalColorsAdv = new Map();
+    const originalOpacitiesAdv = new Map();
+
+    Object.values(houseRef.current).forEach((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.visible = true;
+        restoreObject(obj, originalColorsAdv, originalOpacitiesAdv);
+      }
+    });
+    if (!selectedObjects.length) {
+      updateVisualStates([], originalColorsAdv, originalOpacitiesAdv);
+      return;
+    }
+    Object.values(houseRef.current).forEach((obj) => {
+      if (obj instanceof THREE.Mesh && !selectedObjects.includes(obj)) {
+        obj.visible = false;
+      }
+    });
+
+    // Highlight selected objects
+    selectedObjects.forEach((obj) => {
+      storeOriginals(obj, originalColorsAdv, originalOpacitiesAdv);
+      setObjectOpacity(obj, SELECT_OPACITY);
+      setObjectColor(obj, SELECT_COLOR);
+    });
+
+    updateVisualStates(
+      selectedObjects,
+      originalColorsAdv,
+      originalOpacitiesAdv
+    );
+  }, [selectedObjects]);
+
+  const handleSelectObject = (value) => {
+    const house = houseRef.current;
+    if (!house) return;
+    if (value === "roof") {
+      setSelectedObjects([house.roofLeft, house.roofRight]);
+    } else if (value === "walls") {
+      setSelectedObjects([house.wall1, house.wall2, house.wall3, house.wall4]);
+      // } else if (value in ['floor', 'wall1', 'wall2', 'wall3', 'wall4', 'roofLeft', 'roofRight']) {
+    } else {
+      setSelectedObjects([house[value]]);
+    }
+  };
+  const checkSelected = (value) => {
+    if (value === 'roof') {
+      if (selectedObjects.map(o => o.name).join(',') === 'roofLeft,roofRight') {
+        return true;
+      } else {
+        return false;
+      }
+    } else if (value === 'walls') {
+      if (selectedObjects.map(o => o.name).join(',') === 'wall1,wall2,wall3,wall4') {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      if (selectedObjects.length === 1 && selectedObjects[0].name === value) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
   return (
     <div className="flex items-center flex-wrap justify-between h-full">
       <div className="flex flex-col shrink-0 grow basis-0 h-full">
@@ -86,34 +517,30 @@ const AdvancedEdit = () => {
           </div>
         </div>
         <div className="h-2 bg-gray-400"></div>
-        <div className="flex justify-between flex-col grow shrink-0 basis-0">
-          <div className="grow shrink-0 basis-0 bg-sky-100">Stage</div>
-          <div className="py-1 px-5 bg-sky-600 flex items-center gap-2 justify-between">
-            <div className="flex items-center gap-2">
-              <div className="font-semibold capitalize px-3 text-white">
-                View Options
+        <div className="flex grow shrink-0 basis-0">
+          <div className="min-w-44">
+            {houseItems.map((item, index) => (
+              <div
+                key={index}
+                className={clsx(
+                  "py-2 transition-all duration-300 px-5 cursor-pointer",
+                  checkSelected(item.value)
+                    ? "bg-sky-600 hover:bg-sky-800 text-white"
+                    : "hover:bg-gray-200"
+                )}
+                onClick={() => handleSelectObject(item.value)}
+              >
+                {item.label}
               </div>
-              <button className="cursor-pointer px-5 py-1 text-sm rounded bg-white hover:bg-gray-100 transition-all duration-300">
-                Shell
-              </button>
-              <button className="cursor-pointer px-5 py-1 text-sm rounded bg-white hover:bg-gray-100 transition-all duration-300">
-                Frame
-              </button>
-              <button className="cursor-pointer px-5 py-1 text-sm rounded bg-white hover:bg-gray-100 transition-all duration-300">
-                Roof
-              </button>
-              <button className="cursor-pointer px-5 py-1 text-sm rounded bg-white hover:bg-gray-100 transition-all duration-300">
-                Landscape
-              </button>
-              <button className="cursor-pointer px-5 py-1 text-sm rounded bg-white hover:bg-gray-100 transition-all duration-300">
-                Landscape Settings
-              </button>
-              <button className="cursor-pointer px-5 py-1 text-sm rounded bg-white hover:bg-gray-100 flex items-center gap-2 transition-all duration-300">
-                Change View
-                <FaChevronUp />
-              </button>
-            </div>
-            <div className="text-sm text-white">Powered by SmartBuild</div>
+            ))}
+          </div>
+          <div className="relative grow shrink-0 basis-0 bg-sky-100 flex flex-col items-stretch justify-stretch overflow-hidden">
+            <canvas
+              ref={canvasRef}
+              id="canvas3d"
+              tabIndex="0"
+              className="w-full h-full cursor-grab"
+            />
           </div>
         </div>
       </div>
@@ -122,7 +549,7 @@ const AdvancedEdit = () => {
         <div className="h-2 bg-gray-400"></div>
         <div className="flex flex-col grow shrink-0 basis-0 justify-between">
           <div>
-            <PostFrame />
+            <PostFrame params={params} setParams={setParams} />
           </div>
           <div className="flex items-center gap-2 p-1 pb-3 bg-gray-200">
             <button className="min-w-15 py-2 text-sm bg-white rounded flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-all duration-300">
