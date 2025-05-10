@@ -3,7 +3,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { FaChevronDown, FaChevronRight, FaChevronUp } from "react-icons/fa";
 
 import * as THREE from "three";
+import makerjs from 'makerjs'
+// import { } from 'dxf-writer';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
+import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+
 
 const postFrameActions = [
   { label: "Main Building", value: "main" },
@@ -137,13 +143,215 @@ const PostFrame = ({ params, setParams }) => {
   );
 };
 
+
 const SELECT_COLOR = 0xff4444;
 const SELECT_OPACITY = 0.5;
+
+function convertGroupToMakerModel(group) {
+  const model = { paths: {} };
+  let pathId = 0;
+
+  group.traverse(obj => {
+    console.log(obj)
+    if (obj.isMesh) {
+      const edges = new THREE.EdgesGeometry(obj.geometry);
+      const pos = edges.attributes.position;
+
+      for (let i = 0; i < pos.count; i += 2) {
+        const x1 = pos.getX(i);
+        const y1 = pos.getY(i);
+        const x2 = pos.getX(i + 1);
+        const y2 = pos.getY(i + 1);
+
+        model.paths[`edge${pathId++}`] = new makerjs.paths.Line([x1, y1], [x2, y2]);
+      }
+    }
+
+    if (obj.isLine || obj.isLineSegments || obj.isLineLoop) {
+      const pos = obj.geometry.attributes.position.array;
+      const len = pos.length / 3;
+
+      for (let i = 0; i < len - 1; i++) {
+        const x1 = pos[i * 3];
+        const y1 = pos[i * 3 + 1];
+        const x2 = pos[(i + 1) * 3];
+        const y2 = pos[(i + 1) * 3 + 1];
+
+        model.paths[`line${pathId++}`] = new makerjs.paths.Line([x1, y1], [x2, y2]);
+      }
+
+      // Close the loop if it's a LineLoop
+      if (obj.isLineLoop) {
+        const x1 = pos[(len - 1) * 3];
+        const y1 = pos[(len - 1) * 3 + 1];
+        const x2 = pos[0];
+        const y2 = pos[1];
+        model.paths[`loop${pathId++}`] = new makerjs.paths.Line([x1, y1], [x2, y2]);
+      }
+    }
+  });
+
+  return model;
+}
+
+function exportGroupToDXF3D(group) {
+  const writer = new DxfWriter();
+  writer.setUnits('Meters'); // or 'Millimeters', etc.
+
+  group.traverse(obj => {
+    if (obj.isMesh) {
+      const geometry = obj.geometry
+      const bufferGeometry = geometry.isBufferGeometry
+      ? geometry
+      : new THREE.BufferGeometry().fromGeometry(geometry);
+      bufferGeometry.computeBoundingBox();
+      const positionAttr = bufferGeometry.attributes.position;
+
+      // Apply mesh/world transforms
+      const worldMatrix = obj.matrixWorld;
+
+      for (let i = 0; i < positionAttr.count; i += 3) {
+        const v1 = new THREE.Vector3().fromBufferAttribute(positionAttr, i);
+        const v2 = new THREE.Vector3().fromBufferAttribute(positionAttr, i + 1);
+        const v3 = new THREE.Vector3().fromBufferAttribute(positionAttr, i + 2);
+
+        // Apply world transforms
+        v1.applyMatrix4(worldMatrix);
+        v2.applyMatrix4(worldMatrix);
+        v3.applyMatrix4(worldMatrix);
+
+        // Draw triangle edges
+        writer.addLine([v1.x, v1.y, v1.z], [v2.x, v2.y, v2.z]);
+        writer.addLine([v2.x, v2.y, v2.z], [v3.x, v3.y, v3.z]);
+        writer.addLine([v3.x, v3.y, v3.z], [v1.x, v1.y, v1.z]);
+      }
+    }
+
+    if (obj.isLine) {
+      const pos = obj.geometry.attributes.position;
+      const worldMatrix = obj.matrixWorld;
+
+      for (let i = 0; i < pos.count - 1; i++) {
+        const v1 = new THREE.Vector3().fromBufferAttribute(pos, i);
+        const v2 = new THREE.Vector3().fromBufferAttribute(pos, i + 1);
+
+        v1.applyMatrix4(worldMatrix);
+        v2.applyMatrix4(worldMatrix);
+
+        // writer.add3dLine(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+        writer.addLine([v1.x, v1.y, v1.z], [v2.x, v2.y, v2.z])
+      }
+    }
+  });
+
+  return writer.toDxfString();
+}
+
+function exportSTL(object3D, filename = 'house.stl', binary = false) {
+  const exporter = new STLExporter();
+  const result = exporter.parse(object3D, { binary });
+
+  const blob = binary
+    ? new Blob([result], { type: 'application/octet-stream' })
+    : new Blob([result], { type: 'text/plain' });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportOBJ(object3D, filename = 'house.obj') {
+  const exporter = new OBJExporter();
+  const result = exporter.parse(object3D); // returns string
+
+  const blob = new Blob([result], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportGLTF(object3D, name = 'house', binary = false) {
+  const exporter = new GLTFExporter();
+
+  exporter.parse(
+    object3D,
+    result => {
+      let blob;
+      let filename;
+
+      if (binary) {
+        blob = new Blob([result], { type: 'application/octet-stream' });
+        filename = `${name}.glb`;
+      } else {
+        const json = JSON.stringify(result, null, 2);
+        blob = new Blob([json], { type: 'application/json' });
+        filename = `${name}.gltf`;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    { binary }
+  );
+}
 
 const AdvancedEdit = ({ params, setParams }) => {
   const [selectedObjects, setSelectedObjects] = useState([]);
   const canvasRef = useRef();
   const houseRef = useRef();
+
+  const handleExportSTL = () => {
+    const group = new THREE.Group();
+    const house = houseRef.current
+    console.log(houseRef.current)
+    Object.values(house).forEach(item => {
+      if (item.isMesh) {
+        console.log(item)
+        group.add(item.clone())
+      }
+    })
+    // selectedObjects.forEach(item => group.add(item.clone()))
+
+    exportSTL(group, 'house.stl')
+  };
+
+  const handleExportObj = () => {
+    const group = new THREE.Group();
+    const house = houseRef.current
+    console.log(houseRef.current)
+    Object.values(house).forEach(item => {
+      if (item.isMesh) {
+        console.log(item)
+        group.add(item.clone())
+      }
+    })
+
+    exportOBJ(group, 'house.obj')
+  }
+
+  const handleExportGLTF = () => {
+    const group = new THREE.Group();
+    const house = houseRef.current
+    console.log(houseRef.current)
+    Object.values(house).forEach(item => {
+      if (item.isMesh) {
+        console.log(item)
+        group.add(item.clone())
+      }
+    })
+
+    exportGLTF(group, 'house')
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -552,7 +760,25 @@ const AdvancedEdit = ({ params, setParams }) => {
             <PostFrame params={params} setParams={setParams} />
           </div>
           <div className="flex items-center gap-2 p-1 pb-3 bg-gray-200">
-            <button className="min-w-15 py-2 text-sm bg-white rounded flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-all duration-300">
+            <button
+              className="min-w-15 py-2 px-3 text-sm bg-white rounded flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
+              onClick={handleExportObj}
+            >
+              Export OBJ
+            </button>
+            <button
+              className="min-w-15 py-2 px-3 text-sm bg-white rounded flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
+              onClick={handleExportSTL}
+            >
+              Export STL
+            </button>
+            <button
+              className="min-w-15 py-2 px-3 text-sm bg-white rounded flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-all duration-300"
+              onClick={handleExportGLTF}
+            >
+              Export GLTF
+            </button>
+            <button className="min-w-15 py-2 px-3 text-sm bg-white rounded flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-all duration-300">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -560,10 +786,10 @@ const AdvancedEdit = ({ params, setParams }) => {
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="icon icon-tabler icons-tabler-outline icon-tabler-refresh"
               >
                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                 <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
@@ -573,6 +799,7 @@ const AdvancedEdit = ({ params, setParams }) => {
             <input type="range" className="grow shrink-0 basis-0" />
             <div className="px-2">12s</div>
           </div>
+
         </div>
       </div>
     </div>

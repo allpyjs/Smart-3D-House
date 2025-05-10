@@ -266,17 +266,6 @@ const ThreeDim = ({ params, setParams }) => {
 
     const raycaster3d = new THREE.Raycaster();
     raycaster3d.params.Mesh.threshold = 0.1;
-    // const mouse = new THREE.Vector2();
-
-    // let selectedObject = null;
-    // let hoveredObject = null;
-
-    // const HOVER_COLOR = 0x44aaff;
-    // const SELECT_COLOR = 0xff4444;
-    // const SELECT_OPACITY = 0.5;
-
-    // const originalColors = new Map();
-    // const originalOpacities = new Map();
 
     // Render loop
     const animate = () => {
@@ -394,10 +383,10 @@ const ThreeDim = ({ params, setParams }) => {
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="icon icon-tabler icons-tabler-outline icon-tabler-refresh"
               >
                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                 <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
