@@ -12,23 +12,27 @@ function App() {
   const [showOutputModal, setShowOutputModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("3d");
   const [params, setParams] = useState({
-    floorWidth: 4,
-    floorDepth: 4,
-    height: 2.5,
-    ceilingAngle: 90,
+    width: 10,
+    length: 15,
+    ceilingHeight: 5,
+    roofRiseIn12: 6,
   });
 
   return (
     <div>
-      <div className="flex flex-col h-screen w-screen">
+      <div className="flex flex-col h-screen w-screen overflow-auto">
         <Header setShowOutputModal={setShowOutputModal} />
         <TabGroup selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
-        <div className="flex flex-col grow basis-0 shrink-0">
-          {selectedTab === "3d" && <ThreeDim params={params} setParams={setParams} />}
+        <div className="flex flex-col grow basis-0 shrink-0 overflow-auto">
+          {selectedTab === "3d" && (
+            <ThreeDim params={params} setParams={setParams} />
+          )}
           {selectedTab === "2d" && <TwoDim />}
           {selectedTab === "job" && <JobReview />}
           {selectedTab === "drawing" && <Drawings />}
-          {selectedTab === "advanced" && <AdvancedEdit params={params} setParams={setParams} />}
+          {selectedTab === "advanced" && (
+            <AdvancedEdit params={params} setParams={setParams} />
+          )}
         </div>
       </div>
       <DownloadModal
